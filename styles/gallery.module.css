@@ -1,0 +1,45 @@
+.container {
+  padding: 2rem;
+  text-align: center;
+}
+
+.gallery {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 2rem;
+  margin-top: 2rem;
+}
+
+.card {
+  border: 2px solid #ccc;
+  border-radius: 12px;
+  overflow: hidden;               /* keeps image inside card */
+  cursor: pointer;
+  transition: transform 0.3s, box-shadow 0.3s;
+}
+
+.card:hover {
+  transform: translateY(-4px) scale(1.03);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+}
+
+/* This enforces consistent aspect ratio */
+.imageWrapper {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;            /* pick desired ratio: 16:9 or 4:3 */
+  overflow: hidden;
+  background: #f5f5f5;             /* fallback background while loading */
+}
+
+.image {
+  object-fit: cover;
+  width: 100%;
+  height: 100%;
+}
+
+.description {
+  padding: 0.75rem;
+  font-weight: 500;
+  background: #fff;
+}
