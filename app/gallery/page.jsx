@@ -1,10 +1,12 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
-import Lightbox from "react-image-lightbox";
-import "react-image-lightbox/style.css";
-import styles from "../../styles/gallery.module.css";
+import Lightbox from "yet-another-react-lightbox";
+import "yet-another-react-lightbox/styles.css";
+import Captions from "yet-another-react-lightbox/plugins/captions";
+import "yet-another-react-lightbox/plugins/captions.css";
+import styles from "../../styles/gallery.module.css"
 
 const servicePhotos = [
   {
@@ -768,6 +770,9 @@ const servicePhotos = [
     description: "",
   },
 ];
+// import servicePhotos + styles as you already do
+// const servicePhotos = [{ src, alt, description }, ...]
+// import styles from "./MilitaryGallery.module.css";
 
 export default function MilitaryGallery() {
   const [isOpen, setIsOpen] = useState(false);
@@ -786,7 +791,7 @@ export default function MilitaryGallery() {
       img.src = p.src;
       img.onload = () => {
         if (!mounted) return;
-        setPreloaded(prev => {
+        setPreloaded((prev) => {
           if (prev[i]) return prev; // already true
           const next = [...prev];
           next[i] = true;
@@ -796,14 +801,16 @@ export default function MilitaryGallery() {
       // optional: onerror can mark as loaded to avoid infinite spinner
       img.onerror = () => {
         if (!mounted) return;
-        setPreloaded(prev => {
+        setPreloaded((prev) => {
           const next = [...prev];
           next[i] = true;
           return next;
         });
       };
     });
-    return () => { mounted = false; };
+    return () => {
+      mounted = false;
+    };
   }, []);
 
   // When opening the lightbox, ensure next+prev image are preloaded (if not already).
@@ -812,12 +819,12 @@ export default function MilitaryGallery() {
     const nextIdx = (photoIndex + 1) % servicePhotos.length;
     const prevIdx = (photoIndex + servicePhotos.length - 1) % servicePhotos.length;
 
-    [photoIndex, nextIdx, prevIdx].forEach(i => {
+    [photoIndex, nextIdx, prevIdx].forEach((i) => {
       if (!preloadedRef.current[i]) {
         const img = new window.Image();
         img.src = servicePhotos[i].src;
         img.onload = () => {
-          setPreloaded(prev => {
+          setPreloaded((prev) => {
             if (prev[i]) return prev;
             const next = [...prev];
             next[i] = true;
@@ -825,7 +832,7 @@ export default function MilitaryGallery() {
           });
         };
         img.onerror = () => {
-          setPreloaded(prev => {
+          setPreloaded((prev) => {
             const next = [...prev];
             next[i] = true;
             return next;
@@ -838,9 +845,20 @@ export default function MilitaryGallery() {
   // Helper to know if the current mainSrc is ready (cached)
   const mainReady = preloaded[photoIndex];
 
+  // Lightbox slides for YARL
+  const slides = useMemo(
+    () =>
+      servicePhotos.map((p) => ({
+        src: p.src,
+        description: p.description, // used by Captions plugin
+        alt: p.alt,
+      })),
+    []
+  );
+
   return (
     <div className={styles.container}>
-      <h1>Owner's Military Service</h1>
+      <h1>Owner&apos;s Military Service</h1>
       <p>Honoring a legacy of dedication, courage, and service.</p>
 
       {/* show a subtle message while preloading initial images */}
@@ -875,24 +893,22 @@ export default function MilitaryGallery() {
         ))}
       </div>
 
-      {isOpen && (
-        <Lightbox
-          mainSrc={servicePhotos[photoIndex].src}
-          nextSrc={servicePhotos[(photoIndex + 1) % servicePhotos.length].src}
-          prevSrc={servicePhotos[(photoIndex + servicePhotos.length - 1) % servicePhotos.length].src}
-          onCloseRequest={() => setIsOpen(false)}
-          onMovePrevRequest={() =>
-            setPhotoIndex((photoIndex + servicePhotos.length - 1) % servicePhotos.length)
-          }
-          onMoveNextRequest={() =>
-            setPhotoIndex((photoIndex + 1) % servicePhotos.length)
-          }
-          imageCaption={servicePhotos[photoIndex].description}
-          // optionally disable react-image-lightbox's spinner if you prefer custom behavior:
-          // you can hide the spinner and render a pre-made loader in your thumbnails,
-          // but preloading should eliminate long spinner waits.
-        />
-      )}
+      {/* New lightbox (React 18 compatible) */}
+      <Lightbox
+        open={isOpen}
+        close={() => setIsOpen(false)}
+        index={photoIndex}
+        slides={slides}
+        plugins={[Captions]}
+        on={{ view: ({ index }) => setPhotoIndex(index) }}
+        // optional: simple guard to avoid showing an unready slide
+        render={{
+          slide: ({ slide, rect }) => {
+            if (!mainReady) return <div style={{ height: rect.height }} />;
+            return undefined; // use default renderer once ready
+          },
+        }}
+      />
     </div>
   );
 }
