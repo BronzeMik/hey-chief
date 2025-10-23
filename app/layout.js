@@ -17,7 +17,7 @@ const geistMono = Geist_Mono({
 
 export const metadata = {
   title: "HeyChief Caps",
-  description: "Premium streetwear caps and headwear",
+  description: "U.S Navy inspired hats and merch",
   generator: "Hey Chief Official",
 };
 
