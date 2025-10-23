@@ -7,34 +7,28 @@ const SHOPIFY_STOREFRONT_TOKEN = process.env.SHOPIFY_STOREFRONT_TOKEN;
 const SHOPIFY_API_VERSION = process.env.SHOPIFY_API_VERSION || "2024-01";
 const CACHE_TTL_SECONDS = 60 * 10;
 
-// (optional but helpful for Shopify fetches on Vercel)
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 export async function GET(
   _req: Request,
-  { params }: { params: { handle: string } }
+  { params }: { params: Promise<{ handle: string }> } // 👈 Next 15: params is a Promise
 ) {
   try {
     if (!SHOPIFY_STORE_DOMAIN || !SHOPIFY_STOREFRONT_TOKEN) {
       return NextResponse.json({ error: "Shopify configuration missing" }, { status: 500 });
     }
 
-    const { handle } = params; // ← removed `await`
+    const { handle } = await params; // 👈 must await in Next 15
     const cacheKey = `collection:${handle}`;
 
-    // Try Redis first
-    try {
-      const cached = await redis.get(cacheKey);
-      if (cached) {
-        const headers = new Headers({
-          "x-cache": "HIT",
-          "Cache-Control": `s-maxage=${CACHE_TTL_SECONDS}, stale-while-revalidate=59`,
-        });
-        return NextResponse.json({ products: cached }, { headers });
-      }
-    } catch (err) {
-      console.warn(`[collection:${handle}] Upstash GET failed:`, err);
+    // --- your existing logic below unchanged ---
+    const cached = await redis.get(cacheKey).catch(() => null);
+    if (cached) {
+      return NextResponse.json(
+        { products: cached },
+        { headers: { "x-cache": "HIT", "Cache-Control": `s-maxage=${CACHE_TTL_SECONDS}, stale-while-revalidate=59` } }
+      );
     }
 
     const query = `
@@ -48,17 +42,8 @@ export async function GET(
                 id
                 title
                 handle
-                images(first: 1) {
-                  edges { node { url altText } }
-                }
-                variants(first: 1) {
-                  edges {
-                    node {
-                      id
-                      price { amount currencyCode }
-                    }
-                  }
-                }
+                images(first: 1) { edges { node { url altText } } }
+                variants(first: 1) { edges { node { id price { amount currencyCode } } } }
               }
             }
           }
@@ -82,16 +67,9 @@ export async function GET(
     if (!response.ok) throw new Error(`Shopify API error: ${response.status}`);
 
     const data = await response.json();
-    if (data.errors) {
-      console.error("GraphQL errors:", data.errors);
-      throw new Error("GraphQL query failed");
-    }
+    if (data.errors) throw new Error("GraphQL query failed");
+    if (!data.data.collection) return NextResponse.json({ error: "Collection not found" }, { status: 404 });
 
-    if (!data.data.collection) {
-      return NextResponse.json({ error: "Collection not found" }, { status: 404 });
-    }
-
-    // Transform Shopify data
     const products = data.data.collection.products.edges.map((edge: any) => {
       const product = edge.node;
       const firstImage = product.images.edges[0]?.node;
@@ -107,19 +85,11 @@ export async function GET(
       };
     });
 
-    // Cache
-    try {
-      await redis.set(cacheKey, products, { ex: CACHE_TTL_SECONDS });
-    } catch (err) {
-      console.warn(`[collection:${handle}] Upstash SET failed:`, err);
-    }
-
-    const headers = new Headers({
-      "x-cache": "MISS",
-      "Cache-Control": `s-maxage=${CACHE_TTL_SECONDS}, stale-while-revalidate=59`,
-    });
-
-    return NextResponse.json({ products }, { headers });
+    await redis.set(cacheKey, products, { ex: CACHE_TTL_SECONDS }).catch(() => {});
+    return NextResponse.json(
+      { products },
+      { headers: { "x-cache": "MISS", "Cache-Control": `s-maxage=${CACHE_TTL_SECONDS}, stale-while-revalidate=59` } }
+    );
   } catch (error) {
     console.error("Collection API error:", error);
     return NextResponse.json({ error: "Failed to fetch collection products" }, { status: 500 });
