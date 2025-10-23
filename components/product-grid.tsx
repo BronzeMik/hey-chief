@@ -120,7 +120,7 @@ export function ProductGrid({ category, collectionHandle, title, amount, start =
           <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
             {!collectionHandle && !category
               ? "Browse our complete collection of premium streetwear caps from all categories"
-              : "Discover our latest streetwear caps designed for the urban culture enthusiast"}
+              : "Discover our latest streetwear caps, designed to honor the proud spirit of the U.S. Navy."}
           </p>
         </div>
 

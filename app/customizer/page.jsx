@@ -318,7 +318,7 @@ export default function Customizer() {
       {/* Controls */}
       <section className="w-full lg:w-1/3 bg-white rounded-xl shadow-lg p-6 flex flex-col gap-6">
         <h1 className="text-3xl font-bold">Custom Leather Baseball Cap</h1>
-        <p className="text-xl font-semibold text-indigo-600">$49.00</p>
+        <p className="text-xl font-semibold text-indigo-600">$35.00</p>
         <p className="text-gray-600">Pick a crown/bill preset (mesh auto-follows crown unless specified).</p>
 
         {/* Preset picker */}
