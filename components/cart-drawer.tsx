@@ -122,7 +122,7 @@ export function CartDrawer() {
             <ShoppingBag className="h-5 w-5" />
             Shopping Cart ({state.totalItems})
           </h2>
-          <Button variant="ghost" size="icon" onClick={closeCart}>
+          <Button className={""} variant="ghost" size="icon" onClick={closeCart}>
             <X className="h-5 w-5" />
           </Button>
         </div>
@@ -166,7 +166,7 @@ export function CartDrawer() {
             <div className="text-center py-12">
               <ShoppingBag className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
               <p className="text-muted-foreground mb-4">Your cart is empty</p>
-              <Button onClick={closeCart} variant="outline">
+              <Button size={"lg"} className={""} onClick={closeCart} variant="outline">
                 Continue Shopping
               </Button>
             </div>
@@ -255,11 +255,11 @@ export function CartDrawer() {
               <span>${state.totalPrice.toFixed(2)}</span>
             </div>
 
-            <Button className="w-full" size="lg" onClick={handleCheckout} disabled={isCheckingOut}>
+            <Button variant={"contained"} className="w-full" size="lg" onClick={handleCheckout} disabled={isCheckingOut}>
               {isCheckingOut ? "Creating Checkout..." : "Checkout"}
             </Button>
 
-            <Button variant="outline" className="w-full bg-transparent" onClick={closeCart}>
+            <Button variant="outline" size="lg" className="w-full bg-transparent" onClick={closeCart}>
               Continue Shopping
             </Button>
           </div>

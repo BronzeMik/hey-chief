@@ -166,6 +166,7 @@ export function Hero() {
       <div className="absolute w-full bottom-[max(1rem,env(safe-area-inset-bottom))] left-1/2 -translate-x-1/2 z-20 flex items-center justify-between gap-3 px-5 max-w-[1100px]">
         <Link href={"/products"}>
         <Button
+        variant={"contained"}
           size="lg"
           className="cursor-pointer bg-[#ffde59] hover:bg-yellow-400 text-black font-semibold px-5 py-3"
         >

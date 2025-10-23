@@ -33,7 +33,7 @@ export function Newsletter() {
             required
             className="flex-1 bg-white/10 border-white/20 text-white placeholder:text-gray-400 focus:border-yellow-400"
           />
-          <Button type="submit" className="bg-yellow-400 hover:bg-yellow-500 text-black font-semibold px-8">
+          <Button variant="contained" size={"lg"} type="submit" className="bg-yellow-400 hover:bg-yellow-500 text-black font-semibold px-8">
             SUBSCRIBE
           </Button>
         </form>

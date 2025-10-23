@@ -43,7 +43,7 @@ export function ProductCard({ id, handle, title, image, price, onAddToCart }: Pr
         <div className="px-4 pb-4">
           <div className="flex items-center justify-between">
             <span className="text-2xl font-bold text-primary">${price}</span>
-            <Button onClick={onAddToCart} size="sm" className="bg-black hover:bg-gray-800 text-white font-medium">
+            <Button variant={"contained"} onClick={onAddToCart} size="sm" className="bg-black hover:bg-gray-800 text-white font-medium">
               ADD TO CART
             </Button>
           </div>

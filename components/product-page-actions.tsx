@@ -36,6 +36,7 @@ export function ProductPageActions({ product }: ProductPageActionsProps) {
   return (
     <div className="space-y-4">
       <Button
+      variant={"contained"}
         size="lg"
         className="w-full bg-black hover:bg-gray-800 text-white font-medium py-3"
         onClick={handleAddToCart}

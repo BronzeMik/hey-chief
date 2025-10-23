@@ -39,7 +39,7 @@ export function CategoryHero({
       <div className="relative z-10 text-center text-white px-4">
         <h1 className="text-4xl md:text-6xl font-bold mb-6 tracking-tight">{title}</h1>
         <p className="text-lg md:text-xl mb-8 max-w-2xl mx-auto opacity-90">{description}</p>
-        <Button size="lg" className="bg-primary hover:bg-primary/90 text-primary-foreground">
+        <Button size="lg" variant={"contained"} className="bg-primary hover:bg-primary/90 text-primary-foreground">
           SHOP NOW
         </Button>
       </div>
