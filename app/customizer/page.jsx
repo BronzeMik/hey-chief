@@ -56,22 +56,48 @@ const EMBLEM_SHAPES = [
   '/emblems/oval.png'
 ];
 
+// Pretty-print an emblem path like "/emblems/flat-hexagon.png" -> "Flat Hexagon"
+const prettyEmblemName = (path) =>
+  path
+    .split('/')
+    .pop()
+    .replace(/\.[^/.]+$/, '')   // drop extension
+    .replace(/-/g, ' ')         // hyphens -> spaces
+    .replace(/\b\w/g, c => c.toUpperCase()); // Title Case
+
+
 // =========================
 //  Small UI: split swatch (left=crown, right=bill)
 // =========================
-function ColorPairSwatch({ front, bill, selected, onClick, label }) {
+function ColorPairSwatch({ front, bill, mesh, selected, onClick, label }) {
+  // Build a background that’s half/half for 2 colors, or thirds for 3 colors
+  const twoWay = `linear-gradient(90deg, ${front} 0 50%, ${bill} 50% 100%)`;
+  const threeWay = `conic-gradient(
+    from 0deg,
+    ${front} 0 120deg,
+    ${bill} 120deg 240deg,
+    ${mesh ?? front} 240deg 360deg
+  )`;
+
+  const bg = mesh ? threeWay : twoWay;
+
   return (
     <button
-      aria-label={label ?? `${front} / ${bill}`}
-      title={label ?? `${front} / ${bill}`}
+      aria-label={label ?? (mesh
+        ? `${front} / ${bill} / ${mesh}`
+        : `${front} / ${bill}`)}
+      title={label ?? (mesh
+        ? `${front} / ${bill} / ${mesh}`
+        : `${front} / ${bill}`)}
       onClick={onClick}
       className={`w-10 h-10 rounded-full border-2 focus:outline-none ${
         selected ? 'ring-2 ring-offset-2 ring-indigo-400' : 'border-gray-300'
       }`}
-      style={{ background: `linear-gradient(90deg, ${front} 0 50%, ${bill} 50% 100%)` }}
+      style={{ background: bg }}
     />
   );
 }
+
 
 // =========================
 //  Emblem bits
@@ -326,39 +352,53 @@ export default function Customizer() {
           <label className="block font-medium mb-1">Hat Presets</label>
           <div className="flex gap-2 overflow-x-auto py-1">
             {HAT_AND_BILL_COLORS.slice(0, 12).map((arr, i) => {
-              const a = arr[0];
-              const b = arr[1] ?? arr[0];
-              return (
-                <ColorPairSwatch
-                  key={`${a}-${b}-${i}`}
-                  front={a}
-                  bill={b}
-                  selected={presetIndex === i}
-                  onClick={() => setPresetIndex(i)}
-                  label={`Preset ${i+1}: ${a} / ${b}`}
-                />
-              );
-            })}
+  const a = arr[0];
+  const b = arr[1] ?? arr[0];
+  const c = arr[2]; // may be undefined
+  return (
+    <ColorPairSwatch
+      key={`${a}-${b}-${c ?? 'none'}-${i}`}
+      front={a}
+      bill={b}
+      mesh={c}
+      selected={presetIndex === i}
+      onClick={() => setPresetIndex(i)}
+      label={
+        c
+          ? `Preset ${i+1}: ${a} / ${b} / ${c}`
+          : `Preset ${i+1}: ${a} / ${b}`
+      }
+    />
+  );
+})}
+
           </div>
           {HAT_AND_BILL_COLORS.length > 12 && (
             <details className="mt-2">
               <summary className="cursor-pointer text-sm text-indigo-600">Show more presets</summary>
               <div className="mt-2 flex gap-2 flex-wrap">
                 {HAT_AND_BILL_COLORS.slice(12).map((arr, idx) => {
-                  const i = idx + 12;
-                  const a = arr[0];
-                  const b = arr[1] ?? arr[0];
-                  return (
-                    <ColorPairSwatch
-                      key={`${a}-${b}-${i}`}
-                      front={a}
-                      bill={b}
-                      selected={presetIndex === i}
-                      onClick={() => setPresetIndex(i)}
-                      label={`Preset ${i+1}: ${a} / ${b}`}
-                    />
-                  );
-                })}
+  const i = idx + 12;
+  const a = arr[0];
+  const b = arr[1] ?? arr[0];
+  const c = arr[2];
+  return (
+    <ColorPairSwatch
+      key={`${a}-${b}-${c ?? 'none'}-${i}`}
+      front={a}
+      bill={b}
+      mesh={c}
+      selected={presetIndex === i}
+      onClick={() => setPresetIndex(i)}
+      label={
+        c
+          ? `Preset ${i+1}: ${a} / ${b} / ${c}`
+          : `Preset ${i+1}: ${a} / ${b}`
+      }
+    />
+  );
+})}
+
               </div>
             </details>
           )}
@@ -373,7 +413,7 @@ export default function Customizer() {
             className="w-full p-2 border rounded"
           >
             {EMBLEM_SHAPES.map((shape, i) => (
-              <option key={i} value={shape}>{shape.split('/').pop()}</option>
+              <option key={i} value={shape}>{prettyEmblemName(shape)}</option>
             ))}
           </select>
         </div>
@@ -388,7 +428,7 @@ export default function Customizer() {
                 texturePath={shape}
                 selected={emblemShape === shape}
                 onClick={setEmblemShape}
-                label={shape.split('/').pop()}
+                label={prettyEmblemName(shape)}
               />
             ))}
           </div>
