@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { ProductPageActions } from "@/components/product-page-actions";
+import Link from "next/link";
 
 interface Product {
   id: string;
@@ -80,12 +81,12 @@ export default function ProductPageClient({ handle }: { handle: string }) {
           <p className="text-gray-600 mb-6">
             We couldn’t find a product for “{handle}”.
           </p>
-          <a
+          <Link
             href="/"
             className="inline-block rounded-2xl bg-black px-5 py-3 text-white shadow hover:opacity-90"
           >
             Back to home
-          </a>
+          </Link>
         </div>
       </div>
     );
@@ -159,7 +160,7 @@ export default function ProductPageClient({ handle }: { handle: string }) {
                 <h3 className="text-lg font-semibold mb-2">Tags</h3>
                 <div className="flex flex-wrap gap-2">
                   {product.tags.map((tag) => (
-                    <Badge key={tag} variant="secondary">
+                    <Badge className={""} key={tag} variant="secondary">
                       {tag}
                     </Badge>
                   ))}
