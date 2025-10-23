@@ -2,6 +2,9 @@ import { NextResponse } from "next/server";
 import "server-only";
 import { redis } from "@/lib/upstash";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 const { SHOPIFY_STORE_DOMAIN, SHOPIFY_STOREFRONT_TOKEN, SHOPIFY_API_VERSION = "2024-07" } = process.env;
 
 const SF_ENDPOINT = `https://${SHOPIFY_STORE_DOMAIN}/api/${SHOPIFY_API_VERSION}/graphql.json`;
@@ -33,7 +36,7 @@ export async function GET(req: Request) {
 
     const { searchParams } = new URL(req.url);
     const category = searchParams.get("category");
-    const query = category ? `tag:'${category}'` : undefined;
+    const queryVar = category ? `tag:'${category}'` : null;
 
     const cacheKey = `products:all${category ? `:category=${category}` : ""}`;
 
@@ -41,9 +44,10 @@ export async function GET(req: Request) {
     try {
       const cached = await redis.get(cacheKey);
       if (cached) {
-        return NextResponse.json({ products: cached }, {
-          headers: { "x-cache": "HIT", "Cache-Control": `s-maxage=${CACHE_TTL_SECONDS}, stale-while-revalidate=59` }
-        });
+        return NextResponse.json(
+          { products: cached },
+          { headers: { "x-cache": "HIT", "Cache-Control": `s-maxage=${CACHE_TTL_SECONDS}, stale-while-revalidate=59` } }
+        );
       }
     } catch (err) {
       console.warn("[products] Redis GET failed, continuing:", err);
@@ -61,7 +65,7 @@ export async function GET(req: Request) {
           "Content-Type": "application/json",
           "X-Shopify-Storefront-Access-Token": SHOPIFY_STOREFRONT_TOKEN!,
         },
-        body: JSON.stringify({ query: PRODUCTS_QUERY, variables: { first: perPage, after, query } }),
+        body: JSON.stringify({ query: PRODUCTS_QUERY, variables: { first: perPage, after, query: queryVar } }),
         cache: "no-store",
       });
 
@@ -79,6 +83,7 @@ export async function GET(req: Request) {
         handle: p.handle,
         image: p.images.nodes[0]?.url ?? null,
         price: Number(p.priceRange.minVariantPrice.amount),
+        currencyCode: p.priceRange.minVariantPrice.currencyCode,
         category: category ?? "uncategorized",
       }));
       allProducts = allProducts.concat(mapped);
@@ -93,9 +98,10 @@ export async function GET(req: Request) {
       console.warn("[products] Redis SET failed:", err);
     }
 
-    return NextResponse.json({ products: allProducts }, {
-      headers: { "x-cache": "MISS", "Cache-Control": `s-maxage=${CACHE_TTL_SECONDS}, stale-while-revalidate=59` }
-    });
+    return NextResponse.json(
+      { products: allProducts },
+      { headers: { "x-cache": "MISS", "Cache-Control": `s-maxage=${CACHE_TTL_SECONDS}, stale-while-revalidate=59` } }
+    );
   } catch (e) {
     console.error("[v0] Products API error:", e);
     return NextResponse.json({ error: "Failed to fetch products" }, { status: 500 });
