@@ -5,6 +5,7 @@ import { Newsletter } from "@/components/newsletter";
 import { Button } from "@/components/ui/button";
 import CustomizeHatCTA from "@/components/customize-hat-cta";
 import { Suspense } from "react";
+import Link from "next/link";
 
 // Lightweight grid skeletons for Suspense fallbacks
 function GridFallback4() {
@@ -35,7 +36,13 @@ export default function HomePage() {
 
         {/* Featured Hats (first 4) */}
         <Suspense fallback={<GridFallback4 />}>
-          <ProductGrid collectionHandle="sports-hats" title="Featured Hats" start={0} end={4} />
+          <ProductGrid
+            collectionHandle="sports-hats"
+            title="Featured Hats"
+            start={0}
+            end={4}
+            cta="/products"
+          />
         </Suspense>
 
         <div className="flex flex-col md:flex-row justify-between">
@@ -78,8 +85,16 @@ export default function HomePage() {
 
         {/* Limited Edition (next 4) */}
         <Suspense fallback={<GridFallback4 />}>
-          <ProductGrid collectionHandle="sports-hats" title="Limited Edition Design" start={4} end={8} />
+          <ProductGrid
+            collectionHandle="sports-hats"
+            title="Limited Edition Design"
+            start={4}
+            end={8}
+            cta="/sports"
+          />
         </Suspense>
+
+        
 
         <div
           style={{ backgroundImage: "url('/chief-petty-officer-hats.png')" }}
@@ -96,7 +111,13 @@ export default function HomePage() {
             </div>
 
             <p className="my-5">
-              For a Chief Petty Officer, integrity is not optional—it is the bedrock of leadership and service. It means living by the highest moral compass, upholding traditions, and setting the example for all who follow. This standard is more than words; it reflects a lifetime of discipline, accountability, and pride in the uniform. By embodying uncompromising integrity, every Chief carries forward the Navy&apos;s legacy of honor, courage, and commitment.
+              For a Chief Petty Officer, integrity is not optional—it is the
+              bedrock of leadership and service. It means living by the highest
+              moral compass, upholding traditions, and setting the example for
+              all who follow. This standard is more than words; it reflects a
+              lifetime of discipline, accountability, and pride in the uniform.
+              By embodying uncompromising integrity, every Chief carries forward
+              the Navy&apos;s legacy of honor, courage, and commitment.
             </p>
             <a href="/products">
               <Button className="w-[80%] bg-[#d1460d] text-white">Shop</Button>
@@ -105,7 +126,9 @@ export default function HomePage() {
         </div>
 
         <div
-          style={{ backgroundImage: "url('/chief-petty-officer-hats-mobile.png')" }}
+          style={{
+            backgroundImage: "url('/chief-petty-officer-hats-mobile.png')",
+          }}
           className="relative w-full h-[250px] md:hidden px-3"
         >
           <div className="absolute top-[100px] left-1/2 -translate-x-1/2 bg-white rounded-lg py-4 px-4 text-center flex flex-col justify-center items-center w-[90vw] border-2 border-slate-200">
@@ -119,10 +142,18 @@ export default function HomePage() {
             </div>
 
             <p className="my-5">
-              For a Chief Petty Officer, integrity is not optional—it is the bedrock of leadership and service. It means living by the highest moral compass, upholding traditions, and setting the example for all who follow. This standard is more than words; it reflects a lifetime of discipline, accountability, and pride in the uniform. By embodying uncompromising integrity, every Chief carries forward the Navy&apos;s legacy of honor, courage, and commitment.
+              For a Chief Petty Officer, integrity is not optional—it is the
+              bedrock of leadership and service. It means living by the highest
+              moral compass, upholding traditions, and setting the example for
+              all who follow. This standard is more than words; it reflects a
+              lifetime of discipline, accountability, and pride in the uniform.
+              By embodying uncompromising integrity, every Chief carries forward
+              the Navy&apos;s legacy of honor, courage, and commitment.
             </p>
             <a href="/products">
-              <Button className="w-[80%] bg-[#d1460d] text-white cursor-pointer">Shop</Button>
+              <Button className="w-[80%] bg-[#d1460d] text-white cursor-pointer">
+                Shop
+              </Button>
             </a>
           </div>
         </div>
@@ -135,8 +166,10 @@ export default function HomePage() {
               title="Check Out Hunting and Fishing"
               start={0}
               end={4}
+              cta="/hunting-fishing"
             />
           </Suspense>
+          
         </div>
 
         {/* Full catalog preview */}

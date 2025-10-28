@@ -107,9 +107,11 @@ function Header() {
                         </div>
                         <div className="font-semibold text-sm mb-1">New Arrivals</div>
                         <div className="text-xs text-muted-foreground mb-3">Check out our latest caps</div>
-                        <Button size="sm" variant="outline" className="text-xs bg-transparent">
-                          View All
-                        </Button>
+                        <Link href={"/products"}>
+                          <Button size="sm" variant="outline" className="text-xs bg-transparent">
+                            View All
+                          </Button>
+                        </Link>
                       </div>
                     </div>
                   </div>

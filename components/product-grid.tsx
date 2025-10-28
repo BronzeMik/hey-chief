@@ -5,6 +5,8 @@ import type { Product } from "@/types/product";
 import { useEffect, useMemo, useState } from "react";
 import { useCart } from "@/contexts/cart-context";
 import { useSearchParams } from "next/navigation";
+import Link from "next/link";
+import { Button } from "./ui/button";
 
 /** ---- Tolerant matching helpers (mirror the API version) ---- */
 function normalizeUnicode(v: string) {
@@ -67,6 +69,7 @@ interface ProductGridProps {
   amount?: number;
   start?: number;
   end?: number;
+  cta?: string;
 }
 
 export function ProductGrid({
@@ -76,6 +79,7 @@ export function ProductGrid({
   amount,
   start = 0,
   end,
+  cta
 }: ProductGridProps) {
   const [allProducts, setAllProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
@@ -190,6 +194,16 @@ export function ProductGrid({
               ? "Browse our complete collection of premium streetwear caps from all categories"
               : "Discover our latest streetwear caps, designed to honor the proud spirit of the U.S. Navy."}
           </p>
+          {cta && <Link href={`${cta}`}>
+                    <Button
+                      size="lg"
+                      variant="secondary"
+                      className="bg-black text-white hover:text-gray-800 text-sm cursor-pointer my-5"
+                    >
+                      View Similar Products
+                    </Button>
+                  </Link>
+          }
         </div>
 
         {/* Grid */}
