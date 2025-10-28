@@ -1,121 +1,189 @@
-"use client"
+"use client";
 
-import { ProductCard } from "@/components/product-card"
-import type { Product } from "@/types/product"
-import { useEffect, useState } from "react"
-import { useCart } from "@/contexts/cart-context"
+import { ProductCard } from "@/components/product-card";
+import type { Product } from "@/types/product";
+import { useEffect, useMemo, useState } from "react";
+import { useCart } from "@/contexts/cart-context";
+import { useSearchParams } from "next/navigation";
+
+/** ---- Tolerant matching helpers (mirror the API version) ---- */
+function normalizeUnicode(v: string) {
+  // dashes -> "-", weird spaces -> " "
+  const DASHES = /[\u2010\u2011\u2012\u2013\u2014\u2015\u2212]/g;
+  const SPACES = /[\u00A0\u1680\u2000-\u200A\u202F\u205F\u3000]/g;
+  return v.replace(DASHES, "-").replace(SPACES, " ");
+}
+function norm(v?: string | null) {
+  if (!v) return "";
+  return normalizeUnicode(v).trim().toLowerCase();
+}
+function variantsFor(v: string): string[] {
+  const n = normalizeUnicode(v);
+  const oneSpace = n.replace(/\s+/g, " ").trim();
+  const withSpaces = oneSpace.replace(/-/g, " ");     // flat top hexagon
+  const withHyphens = oneSpace.replace(/\s+/g, "-");  // flat-top-hexagon
+  return Array.from(new Set([oneSpace, withSpaces, withHyphens]));
+}
+function matchesFacet(value: string | null | undefined, selected: string[]): boolean {
+  if (!selected.length) return true; // no filter -> pass
+  const v = norm(value);
+  if (!v) return false;
+  // build tolerant candidate set for the product value too
+  const productCandidates = variantsFor(v);
+  // selected list: any match wins
+  return selected.some(sel => {
+    const selCandidates = variantsFor(sel.toLowerCase());
+    // intersect candidate sets
+    return selCandidates.some(sc => productCandidates.includes(sc));
+  });
+}
+function tokens(str: string) {
+  return norm(str).split(/\s+/).filter(Boolean);
+}
+function matchesSearch(p: Product, q: string): boolean {
+  const t = q.trim();
+  if (!t) return true;
+  const qs = tokens(t);
+  const hay = [
+    p.title,
+    p.handle,
+    (p as any).tags?.join(" "),
+    (p as any).color,
+    (p as any).style,
+    (p as any).emblemColor,
+    (p as any).emblemShape,
+  ]
+    .map(norm)
+    .join(" ");
+  // require all tokens to appear
+  return qs.every(tok => hay.includes(tok));
+}
+/** ------------------------------------------------------------ */
 
 interface ProductGridProps {
-  category?: string
-  collectionHandle?: string
-  title?: string
-  amount?: number
-  start?: number
-  end?: number
+  category?: string;
+  collectionHandle?: string;
+  title?: string;
+  amount?: number;
+  start?: number;
+  end?: number;
 }
 
-export function ProductGrid({ category, collectionHandle, title, amount, start = 0, end }: ProductGridProps) {
-  const [products, setProducts] = useState<Product[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const { dispatch } = useCart()
+export function ProductGrid({
+  category,
+  collectionHandle,
+  title,
+  amount,
+  start = 0,
+  end,
+}: ProductGridProps) {
+  const [allProducts, setAllProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const { dispatch } = useCart();
+  const searchParams = useSearchParams();
 
+  // 1) Fetch UNFILTERED list once (or by category/collection)
   useEffect(() => {
-    const controller = new AbortController()
-    let mounted = true
+    const controller = new AbortController();
+    let mounted = true;
+    const overlayDelay = 100;
+    const startTimer = window.setTimeout(() => mounted && setLoading(true), overlayDelay);
 
-    // keep a short delay so very fast requests don't flash the animation
-    const overlayDelay = 100
-    let startTimer = window.setTimeout(() => {
-      if (mounted) setLoading(true)
-    }, overlayDelay)
-
-    const fetchProducts = async () => {
+    (async () => {
       try {
-        setLoading(true)
-        let url = "/api/products"
+        setLoading(true);
+        let url: string;
         if (collectionHandle) {
-          url = `/api/collections/${collectionHandle}`
+          url = `/api/collections/${collectionHandle}`;
         } else if (category) {
-          url = `/api/products?category=${category}`
-        }
-
-        const response = await fetch(url, { signal: controller.signal })
-
-        if (!response.ok) {
-          const errorText = await response.text()
-          throw new Error(`Failed to fetch products: ${response.status} - ${errorText}`)
-        }
-
-        const data = await response.json()
-        if (end) {
-          setProducts(data.products.slice(start, end))
+          url = `/api/products?category=${encodeURIComponent(category)}`;
         } else {
-          setProducts(data.products)
+          url = `/api/products`; // ← no filters; we’ll filter client-side
         }
-      } catch (err) {
-        if (!mounted) return
-        console.error("Shopify Product fetch error:", err)
-        setError(err instanceof Error ? err.message : "An error occurred")
+        const res = await fetch(url, { signal: controller.signal });
+        if (!res.ok) throw new Error(`${res.status} - ${await res.text()}`);
+        const data = await res.json();
+        setAllProducts(data.products ?? []);
+        setError(null);
+      } catch (e) {
+        if (!mounted) return;
+        console.error("Product fetch error:", e);
+        setError(e instanceof Error ? e.message : "An error occurred");
       } finally {
-        if (!mounted) return
-        setLoading(false)
-        clearTimeout(startTimer)
+        if (!mounted) return;
+        setLoading(false);
+        clearTimeout(startTimer);
       }
-    }
-
-    fetchProducts()
+    })();
 
     return () => {
-      mounted = false
-      controller.abort()
-      clearTimeout(startTimer)
-    }
-  }, [category, collectionHandle, start, end])
+      mounted = false;
+      controller.abort();
+      clearTimeout(startTimer);
+    };
+  }, [category, collectionHandle]);
+
+  // 2) Read current URL facets/search (multi-select comma lists)
+  const selected = useMemo(() => {
+    const getList = (k: string) => {
+      const raw = searchParams.get(k);
+      if (!raw) return [];
+      return raw.split(",").map(s => s.trim()).filter(Boolean);
+    };
+    return {
+      q: searchParams.get("q") ?? "",
+      color: getList("color"),
+      style: getList("style"),
+      emblem_color: getList("emblem_color"),
+      emblem_shape: getList("emblem_shape"),
+    };
+  }, [searchParams]);
+
+  // 3) Apply client-side filtering
+  const filtered = useMemo(() => {
+    const list = allProducts.filter((p: any) => {
+      // Each product coming from /api/products already includes these metafields
+      const okColor = matchesFacet(p.color, selected.color);
+      const okStyle = matchesFacet(p.style, selected.style);
+      const okEmblemColor = matchesFacet(p.emblemColor, selected.emblem_color);
+      const okEmblemShape = matchesFacet(p.emblemShape, selected.emblem_shape);
+      const okSearch = matchesSearch(p, selected.q);
+      return okColor && okStyle && okEmblemColor && okEmblemShape && okSearch;
+    });
+    // Optional: keep your existing slicing behavior
+    return typeof end === "number" ? list.slice(start, end) : list;
+  }, [allProducts, selected, start, end]);
 
   const handleAddToCart = (product: Product) => {
     dispatch({
       type: "ADD_ITEM",
       payload: {
         id: product.id,
-        variantId: product.variantId,
+        variantId: (product as any).variantId,
         title: product.title,
-        image: product.image,
-        price: product.price,
+        image: (product as any).image,
+        price: (product as any).price,
       },
-    })
-    dispatch({ type: "OPEN_CART" })
-  }
+    });
+    dispatch({ type: "OPEN_CART" });
+  };
 
-  // how many skeletons to show while loading (matches grid density)
-  const skeletonCount = Math.max(4, amount ?? 8)
+  const skeletonCount = Math.max(4, amount ?? 8);
 
   return (
     <section className="py-16 px-4">
       <div className="container mx-auto">
-        {/* subtle top progress bar (only visible while loading) */}
-        <div className="relative">
-          {loading && (
-            <div aria-hidden className="absolute left-0 right-0 top-0 z-10">
-              <div className="h-1 w-full overflow-hidden bg-transparent">
-                <div className="progress-runner" />
-              </div>
-            </div>
-          )}
-        </div>
-
         {/* Section Header */}
         <div className="text-center mb-12">
           <h2 className="text-3xl md:text-4xl font-bold mb-4">
-            {title ? title : ( 
-              <>
-              {collectionHandle
+            {title
+              ? title
+              : collectionHandle
               ? `${collectionHandle.toUpperCase().replace("-", " & ")} COLLECTION`
               : category
-                ? `${category.toUpperCase().replace("-", " & ")} COLLECTION`
-                : "ALL PRODUCTS"}
-            </>
-          )}
+              ? `${category.toUpperCase().replace("-", " & ")} COLLECTION`
+              : "ALL PRODUCTS"}
           </h2>
           <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
             {!collectionHandle && !category
@@ -124,19 +192,15 @@ export function ProductGrid({ category, collectionHandle, title, amount, start =
           </p>
         </div>
 
-        {/* Product Grid */}
+        {/* Grid */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-          {/* show skeletons while loading to mimic real content layout */}
           {loading
             ? Array.from({ length: skeletonCount }).map((_, i) => (
                 <div key={`skeleton-${i}`} className="animate-pulse">
                   <div className="bg-gray-200/40 rounded-lg overflow-hidden">
-                    {/* image skeleton */}
                     <div className="w-full h-56 sm:h-64 md:h-48 lg:h-56 relative overflow-hidden">
                       <div className="shimmer absolute inset-0" />
                     </div>
-
-                    {/* body */}
                     <div className="p-4">
                       <div className="h-4 bg-gray-200/40 rounded w-3/4 mb-3 shimmer-text" />
                       <div className="h-3 bg-gray-200/40 rounded w-1/2 mb-4 shimmer-text" />
@@ -145,7 +209,7 @@ export function ProductGrid({ category, collectionHandle, title, amount, start =
                   </div>
                 </div>
               ))
-            : products.map((product) => (
+            : filtered.map((product: any) => (
                 <ProductCard
                   key={product.id}
                   id={product.id}
@@ -158,13 +222,11 @@ export function ProductGrid({ category, collectionHandle, title, amount, start =
               ))}
         </div>
 
-        {/* Empty / Error states shown inside the page */}
-        {!loading && products.length === 0 && !error && (
+        {!loading && filtered.length === 0 && !error && (
           <div className="text-center mt-8">
             <p className="text-lg">No products found.</p>
           </div>
         )}
-
         {error && (
           <div className="text-center mt-8">
             <p className="text-lg text-red-500">No Products Available — {error}</p>
@@ -172,26 +234,15 @@ export function ProductGrid({ category, collectionHandle, title, amount, start =
         )}
       </div>
 
-      {/* shimmer + subtle animations styles */}
+      {/* shimmer styles */}
       <style jsx>{`
-        /* thin progress bar runner - short animated sweep */
-        .progress-runner {
-          width: 30%;
-          height: 4px;
-          background: linear-gradient(90deg, rgba(255,255,255,0.12), rgba(255,255,255,0.28), rgba(255,255,255,0.12));
-          transform: translateX(-110%);
-          animation: progressMove 1.4s cubic-bezier(.2,.8,.2,1) infinite;
-          box-shadow: 0 1px 6px rgba(0,0,0,0.2);
-        }
-        @keyframes progressMove {
-          0% { transform: translateX(-110%); opacity: 0.3 }
-          50% { transform: translateX(20%); opacity: 1 }
-          100% { transform: translateX(120%); opacity: 0.3 }
-        }
-
-        /* shimmer layer across image */
         .shimmer {
-          background: linear-gradient(90deg, rgba(255,255,255,0.02) 0%, rgba(255,255,255,0.06) 50%, rgba(255,255,255,0.02) 100%);
+          background: linear-gradient(
+            90deg,
+            rgba(255, 255, 255, 0.02) 0%,
+            rgba(255, 255, 255, 0.06) 50%,
+            rgba(255, 255, 255, 0.02) 100%
+          );
           transform: translateX(-100%);
           animation: shimmerMove 1.2s linear infinite;
         }
@@ -199,21 +250,20 @@ export function ProductGrid({ category, collectionHandle, title, amount, start =
           0% { transform: translateX(-100%); }
           100% { transform: translateX(100%); }
         }
-
-        /* lighter shimmer for text blocks */
-        .shimmer-text {
-          position: relative;
-          overflow: hidden;
-        }
+        .shimmer-text { position: relative; overflow: hidden; }
         .shimmer-text::after {
           content: "";
-          position: absolute;
-          inset: 0;
-          background: linear-gradient(90deg, rgba(255,255,255,0.00) 0%, rgba(255,255,255,0.06) 50%, rgba(255,255,255,0.00) 100%);
+          position: absolute; inset: 0;
+          background: linear-gradient(
+            90deg,
+            rgba(255, 255, 255, 0) 0%,
+            rgba(255, 255, 255, 0.06) 50%,
+            rgba(255, 255, 255, 0) 100%
+          );
           transform: translateX(-100%);
           animation: shimmerMove 1.2s linear infinite;
         }
       `}</style>
     </section>
-  )
+  );
 }
