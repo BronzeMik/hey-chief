@@ -4,7 +4,20 @@ import { Newsletter } from "@/components/newsletter";
 import { Filters } from "@/components/filters";
 // Optional: add search on this page too
 // import { SearchBox } from "@/components/search-box";
+import { Suspense } from "react";
+function FiltersFallback() {
+  return <div className="md:col-span-3 h-40 rounded-xl border animate-pulse" />;
+}
 
+function GridFallback() {
+  return (
+    <div className="md:col-span-9 grid grid-cols-1 md:grid-cols-3 gap-6">
+      {Array.from({ length: 9 }).map((_, i) => (
+        <div key={i} className="h-60 rounded-xl border animate-pulse" />
+      ))}
+    </div>
+  );
+}
 export default function SportsPage() {
   return (
     <div className="min-h-screen bg-background">
@@ -22,12 +35,16 @@ export default function SportsPage() {
 
           <div className="md:grid md:grid-cols-12 md:gap-6">
             <aside className="md:col-span-3">
+              <Suspense fallback={<FiltersFallback />}>
               <Filters />
+              </Suspense>
             </aside>
 
             <section className="md:col-span-9">
               {/* Fetches the Sports collection once; filters/search happen client-side */}
+              <Suspense fallback={<GridFallback />}>
               <ProductGrid collectionHandle="sports-hats" />
+              </Suspense>
             </section>
           </div>
         </div>

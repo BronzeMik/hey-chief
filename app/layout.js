@@ -3,6 +3,7 @@ import { CartProvider } from "@/contexts/cart-context";
 import { ThemeProvider } from "next-themes";
 import { CartDrawer } from "@/components/cart-drawer"
 import Header from "@/components/header"
+import { Suspense } from "react";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -29,7 +30,9 @@ export default function RootLayout({ children }) {
       >
         <CartProvider>
           <ThemeProvider attribute="class" defaultTheme="light" enableSystem disableTransitionOnChange>
-            <Header />
+            <Suspense fallback={null /* or a small skeleton header */}>
+              <Header />
+            </Suspense>
               {children}
             <CartDrawer />
           </ThemeProvider>

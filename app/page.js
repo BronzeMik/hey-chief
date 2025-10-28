@@ -1,8 +1,30 @@
+// app/page.tsx
 import { Hero } from "@/components/hero";
 import { ProductGrid } from "@/components/product-grid";
 import { Newsletter } from "@/components/newsletter";
 import { Button } from "@/components/ui/button";
 import CustomizeHatCTA from "@/components/customize-hat-cta";
+import { Suspense } from "react";
+
+// Lightweight grid skeletons for Suspense fallbacks
+function GridFallback4() {
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-4 gap-6 px-4">
+      {Array.from({ length: 4 }).map((_, i) => (
+        <div key={i} className="h-60 rounded-xl border animate-pulse" />
+      ))}
+    </div>
+  );
+}
+function GridFallback() {
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-4 gap-6 px-4">
+      {Array.from({ length: 8 }).map((_, i) => (
+        <div key={i} className="h-60 rounded-xl border animate-pulse" />
+      ))}
+    </div>
+  );
+}
 
 export default function HomePage() {
   return (
@@ -10,12 +32,12 @@ export default function HomePage() {
       <main>
         <Hero />
         <CustomizeHatCTA />
-        <ProductGrid
-          collectionHandle="sports-hats"
-          title="Featured Hats"
-          start={0}
-          end={4}
-        />
+
+        {/* Featured Hats (first 4) */}
+        <Suspense fallback={<GridFallback4 />}>
+          <ProductGrid collectionHandle="sports-hats" title="Featured Hats" start={0} end={4} />
+        </Suspense>
+
         <div className="flex flex-col md:flex-row justify-between">
           <img
             src={"/fast_shipping.png"}
@@ -53,12 +75,12 @@ export default function HomePage() {
             </div>
           </div>
         </div>
-        <ProductGrid
-          collectionHandle="sports-hats"
-          title="Limited Edition Design"
-          start={4}
-          end={8}
-        />
+
+        {/* Limited Edition (next 4) */}
+        <Suspense fallback={<GridFallback4 />}>
+          <ProductGrid collectionHandle="sports-hats" title="Limited Edition Design" start={4} end={8} />
+        </Suspense>
+
         <div
           style={{ backgroundImage: "url('/chief-petty-officer-hats.png')" }}
           className="w-full h-[500px] hidden md:flex justify-end py-8 px-7"
@@ -77,14 +99,13 @@ export default function HomePage() {
               For a Chief Petty Officer, integrity is not optional—it is the bedrock of leadership and service. It means living by the highest moral compass, upholding traditions, and setting the example for all who follow. This standard is more than words; it reflects a lifetime of discipline, accountability, and pride in the uniform. By embodying uncompromising integrity, every Chief carries forward the Navy&apos;s legacy of honor, courage, and commitment.
             </p>
             <a href="/products">
-            <Button className="w-[80%] bg-[#d1460d] text-white">Shop</Button>
+              <Button className="w-[80%] bg-[#d1460d] text-white">Shop</Button>
             </a>
           </div>
         </div>
+
         <div
-          style={{
-            backgroundImage: "url('/chief-petty-officer-hats-mobile.png')",
-          }}
+          style={{ backgroundImage: "url('/chief-petty-officer-hats-mobile.png')" }}
           className="relative w-full h-[250px] md:hidden px-3"
         >
           <div className="absolute top-[100px] left-1/2 -translate-x-1/2 bg-white rounded-lg py-4 px-4 text-center flex flex-col justify-center items-center w-[90vw] border-2 border-slate-200">
@@ -101,19 +122,28 @@ export default function HomePage() {
               For a Chief Petty Officer, integrity is not optional—it is the bedrock of leadership and service. It means living by the highest moral compass, upholding traditions, and setting the example for all who follow. This standard is more than words; it reflects a lifetime of discipline, accountability, and pride in the uniform. By embodying uncompromising integrity, every Chief carries forward the Navy&apos;s legacy of honor, courage, and commitment.
             </p>
             <a href="/products">
-            <Button className="w-[80%] bg-[#d1460d] text-white cursor-pointer">Shop</Button>
+              <Button className="w-[80%] bg-[#d1460d] text-white cursor-pointer">Shop</Button>
             </a>
           </div>
         </div>
+
         <div className="mt-[200px]">
-        <ProductGrid
-          collectionHandle="hunting-and-fishing-hats"
-          title="Check Out Hunting and Fishing"
-          start={0}
-          end={4}
-        />
+          {/* Hunting & Fishing preview (first 4) */}
+          <Suspense fallback={<GridFallback4 />}>
+            <ProductGrid
+              collectionHandle="hunting-and-fishing-hats"
+              title="Check Out Hunting and Fishing"
+              start={0}
+              end={4}
+            />
+          </Suspense>
         </div>
-        <ProductGrid />
+
+        {/* Full catalog preview */}
+        <Suspense fallback={<GridFallback />}>
+          <ProductGrid />
+        </Suspense>
+
         <Newsletter />
       </main>
     </div>

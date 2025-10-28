@@ -39,22 +39,25 @@ const COLLECTION_QUERY = /* GraphQL */ `
   }
 `;
 
-export async function GET(_req: Request, ctx: { params: { handle: string } }) {
+export async function GET(req: Request) {
   try {
-    // ✅ must await params now
-    const { handle } = await ctx.params;
+    if (!SHOPIFY_STORE_DOMAIN || !SHOPIFY_STOREFRONT_TOKEN) {
+      return NextResponse.json({ error: "Shopify configuration missing" }, { status: 500 });
+    }
+
+    // 🔒 Parse the [handle] from the URL path instead of relying on `params`
+    // /api/collections/[handle]
+    const { pathname } = new URL(req.url);
+    const match = pathname.match(/\/api\/collections\/([^/]+)\/?$/);
+    const handle = match ? decodeURIComponent(match[1]) : null;
 
     if (!handle) {
       return NextResponse.json({ error: "Missing collection handle" }, { status: 400 });
     }
 
-    if (!SHOPIFY_STORE_DOMAIN || !SHOPIFY_STOREFRONT_TOKEN) {
-      return NextResponse.json({ error: "Shopify configuration missing" }, { status: 500 });
-    }
-
     const cacheKey = `collection:v2:${handle}`;
 
-    // Try Redis
+    // Try Redis cache
     try {
       const cached = await redis.get(cacheKey);
       if (cached) {
@@ -72,7 +75,7 @@ export async function GET(_req: Request, ctx: { params: { handle: string } }) {
       console.warn(`[collection:${handle}] Upstash GET failed:`, err);
     }
 
-    const perPage = 250; // Shopify max per request
+    const perPage = 250;
     let all: any[] = [];
     let after: string | null = null;
 
@@ -93,10 +96,7 @@ export async function GET(_req: Request, ctx: { params: { handle: string } }) {
       const json = await r.json();
       if (!r.ok || json.errors) {
         const msg = json?.errors?.map((e: any) => e.message).join("; ") || r.statusText;
-        return NextResponse.json(
-          { error: `Shopify error: ${msg}`, details: json },
-          { status: 502 }
-        );
+        return NextResponse.json({ error: `Shopify error: ${msg}`, details: json }, { status: 502 });
       }
 
       const col = json?.data?.collection;
